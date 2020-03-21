@@ -348,8 +348,17 @@ gerIncidentDf$imported[1] = gerIncidentDf$local[1]
 gerIncidentDf$local[1] = 0
 
 epiEstimObj = estimate_R(gerIncidentDf, 
-           method = "parametric_si", 
-           config = make_config(list(mean_si = 7.5,std_si = 3.4))
+           method = "uncertain_si", 
+           config = make_config(list(mean_si = 7.5, 
+                                     std_mean_si = 2, 
+                                     min_mean_si = 1,
+                                     max_mean_si = 8.4,
+                                     std_si = 3.4, 
+                                     std_std_si = 1, 
+                                     min_std_si = 0.5,
+                                     max_std_si = 4,
+                                     n1 = 1000, 
+                                     n2 = 1000))
            )
 # okay the plots are not what we want them to be, so we need to fight a bit
 
@@ -362,7 +371,8 @@ pInc = gerIncidentDf %>% pivot_longer(-dates) %>%
 
 
 pSI = plot(epiEstimObj, "SI") +theme_lucid()
-pRi = plot(epiEstimObj, "R") +theme_lucid()
+pRi = plot(epiEstimObj, "R") + theme_lucid() +
+  facet_zoom(xlim =c(as.Date("2020-03-07"), as.Date("2020-03-10")))
 
 pInc/pSI/pRi
 

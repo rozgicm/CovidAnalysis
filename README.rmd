@@ -73,9 +73,15 @@ human_numbers = function(x = NULL, smbl ="", signif = 1){
 The conducted analysis follows the posts by Tim Churches, starting with his post in February 2020:
 <https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/#estimating-changes-in-the-effective-reproduction-number>
 
-The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation. The main code is found in **covidAnalysis.R**.
+The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation. The main code is found in **covidAnalysis.R**. I will try to show some results here on the main page. Please, feel free to contribute.
 
-### Data Acquisition
+
+## Disclaimer
+I am **not** a medical doctor, I am only a data-dude who wants to help citizen data scientist to stay informed and check the numbers we are confronted with every day. 
+If you,  on the other hand, are someone who understands more about epidemiology, feel  free to use all you find here. Remember, most of it is presented in a much better way by Tim Churches.
+
+
+## Data Acquisition
 Data are pulled from JHU Git Hub archive <https://raw.githubusercontent.com/CSSEGISandData/>
 
 ```{r read_data, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
@@ -114,8 +120,12 @@ p1
 ```
 
 ## Implemented Features
+As to this day ```{r} today()``` only simple models are considered.
+
+
 ### Linear modelling
 A simple liner model is fit can easily be fitted to the log-transformed data:
+
 
 ```{r linModel, echo=TRUE}
 myLinearModel = lm(log(cumulative_cases) ~ myDay,
@@ -135,7 +145,7 @@ datLong %>% filter(Date >= as.Date("2020-02-24") ) %>%
 
 ```
 
-With a linear modell crude predictions can be made:
+With a linear model crude predictions can be made:
 ```{r predictions, message=FALSE, warning=FALSE, include=FALSE}
 startDay =  datLong %>%
   filter(Date >= as.Date("2020-02-24")) %>% pull(myDay) %>% min()
@@ -178,8 +188,10 @@ p4 = p1 + geom_ribbon(data = predDF,
 p4 + facet_zoom(xlim= c(endDate, max(predDF$Date)))
 ```
 
+
+
 ### SIR modelling
-A more sophisticated way to model the outbreak can be performed by appling the SIR-Model
+A more sophisticated way to model the outbreak can be performed by applying the SIR-Model
 (**S**usceptible **I**nfectious **R**ecovered). The model is based on an ODE system. See the code and Tim Churches' posts for more details. However, the following can be obtained:
 ```{r include=FALSE, paged.print=TRUE}
 
@@ -240,12 +252,12 @@ dat %>% select(Date, cumulative_cases, I) %>%
   ggplot(aes(x=Date, y=value, colour = name)) +
   geom_line() +
   geom_point(shape = "x") +
-  labs(title = glue("SIR-Modell based projection of COVID-19 infections in {datLong$country[1]}"),
+  labs(title = glue("SIR-Model based projection of COVID-19 infections in {datLong$country[1]}"),
        subtitle = glue("data ranging from {min(dat$Date)} to {max(dat$Date)}"),
        caption = glue("fitted data from SIR model,\n
                       computed R0 ={round(optParams[1]/optParams[2],2)},\n
                       fitted point of reduce: At {dat$Date[which(dat$I==max(dat$I))]} with {human_numbers(round(dat$I[which(dat$I==max(dat$I))]))} infections"),
-       y = "Cummulative Cases") +
+       y = "Cumulative Cases") +
 
   scale_y_continuous(labels = human_numbers)+
   theme_lucid()+
@@ -254,3 +266,8 @@ dat %>% select(Date, cumulative_cases, I) %>%
               xlim = c(min(datLong$Date), max(datLong$Date)),
               horizontal = FALSE)
 ```
+
+<!-- ### Estimating Changing Reproduction Numbers -->
+<!-- With  the EpiEstim package changing reproduction rates can be computed. So far only constant changerates have been considered. -->
+
+
