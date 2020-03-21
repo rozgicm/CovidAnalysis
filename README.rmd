@@ -1,0 +1,87 @@
+---
+title: "README"
+author: "Marco Rozgic"
+date: "3/21/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	message = FALSE,
+	warning = FALSE,
+	include = FALSE
+)
+library(tidyverse)
+
+# package to handle date data types, which are allways hell
+library(lubridate)
+
+# this package has some nice themes for graphics which I find appealing
+library(see)
+
+# allows for great annotaions using our data making the code transferable
+library(glue) 
+
+# nice package to arrange multiple plots
+library(patchwork)
+
+# helps us to make interactive plots 
+library(plotly) 
+
+# make even nicer plots
+library(ggforce)
+
+# a package containing an ODE solver for the SIR equation
+library(deSolve)
+
+# epidemiology package
+library(EpiEstim)
+```
+
+## R Markdown
+
+The conducted analysis follows the posts by Tim Churches, staring with his post Februray 2020:
+<https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/#estimating-changes-in-the-effective-reproduction-number>
+
+The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists, as well as non scientists to gain insights and conduct their ow analyis of the situtaion.
+
+### Data Aquisition
+Data are pulled from JHU GitHub archive <https://raw.githubusercontent.com/CSSEGISandData/>
+
+```{r read_data, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/", 
+                 "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/", 
+                 "time_series_19-covid-Confirmed.csv", sep = "")
+
+dat =  read_csv(jhu_url) %>% rename(province = "Province/State", 
+                                    country = "Country/Region")
+
+datLong = dat %>% 
+  filter(country == "Germany") %>%  
+  pivot_longer(-c(province,country, Lat, Long),
+               names_to = "Date", 
+               values_to = "cumulative_cases")
+datLong = datLong %>% 
+  select(-c(province, Lat, Long)) %>% 
+  mutate(Date = mdy(Date)) 
+datLong = datLong %>%  
+  filter(cumulative_cases != 0) %>% 
+  mutate(incident_cases = c(0, diff(cumulative_cases)),
+         myDay = 1:nrow(.),
+         myWeek = week(Date)-3 ) 
+
+p1 = datLong %>% ggplot(aes(x=Date, y = cumulative_cases)) +
+  geom_line() +
+  geom_point(shape = "x") +
+  labs(title = glue("Number of COVID-19 infections in {datLong$country[1]}"),
+       subtitle = glue("data ranging from {min(datLong$Date)} to {max(datLong$Date)}")
+       ) +
+  theme_lucid()+
+  scale_fill_material_c()
+```
+```{r echo=FALSE}
+p1
+```
+
+
+
