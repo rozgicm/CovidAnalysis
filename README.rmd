@@ -2,17 +2,14 @@
 title: "README"
 author: "Marco Rozgic"
 date: "3/21/2020"
-output: html_document
+output: md_document
+
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(
-	message = FALSE,
-	warning = FALSE,
-	include = FALSE
-)
+knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
-
+#md_document
 # package to handle date data types, which are allways hell
 library(lubridate)
 
@@ -38,15 +35,15 @@ library(deSolve)
 library(EpiEstim)
 ```
 
-## R Markdown
+## COVID-19 outbreak analysis in Germany with R
 
-The conducted analysis follows the posts by Tim Churches, staring with his post Februray 2020:
+The conducted analysis follows the posts by Tim Churches, starting with his post February 2020:
 <https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/#estimating-changes-in-the-effective-reproduction-number>
 
-The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists, as well as non scientists to gain insights and conduct their ow analyis of the situtaion.
+The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation.
 
-### Data Aquisition
-Data are pulled from JHU GitHub archive <https://raw.githubusercontent.com/CSSEGISandData/>
+### Data Acquisition
+Data are pulled from JHU Git Hub archive <https://raw.githubusercontent.com/CSSEGISandData/>
 
 ```{r read_data, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/", 
