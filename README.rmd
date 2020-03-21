@@ -37,7 +37,7 @@ library(EpiEstim)
 
 ## COVID-19 outbreak analysis in Germany with R
 
-The conducted analysis follows the posts by Tim Churches, starting with his post February 2020:
+The conducted analysis follows the posts by Tim Churches, starting with his post in February 2020:
 <https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/#estimating-changes-in-the-effective-reproduction-number>
 
 The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation.
@@ -78,6 +78,70 @@ p1 = datLong %>% ggplot(aes(x=Date, y = cumulative_cases)) +
 ```
 ```{r echo=FALSE}
 p1
+```
+
+### Implemented Features
+A simple liner model is fit can easily be fitted to the log-transformed data:
+
+```{r linModel, echo=TRUE}
+myLinearModel = lm(log(cumulative_cases) ~ myDay,
+                   datLong %>% 
+                   filter(Date >= as.Date("2020-02-24")) 
+                   )
+summary(myLinearModel)
+```
+```{r linModelPlot, echo=FALSE}
+linModelDf = broom::tidy(myLinearModel)
+datLong %>% filter(Date >= as.Date("2020-02-24") ) %>% 
+  ggplot(aes(x=myDay, y= log(cumulative_cases))) +
+  geom_smooth(method = lm) +
+  geom_point() +
+  labs(title = glue("fitted linear model with  intercept {round(linModelDf$estimate[1],2)} and slope {round(linModelDf$estimate[2],2)}"))+
+  theme_lucid()
+
+```
+
+With a linear modell crude predictions can be made:
+```{r predictions, message=FALSE, warning=FALSE, include=FALSE}
+startDay =  datLong %>% 
+  filter(Date >= as.Date("2020-02-24")) %>% pull(myDay) %>% min()
+endDay = datLong %>% 
+  filter(Date >= as.Date("2020-02-24")) %>% pull(myDay) %>% max()
+
+startDate = datLong %>% 
+  filter(Date >= as.Date("2020-02-24")) %>% pull(Date) %>% min()
+
+endDate = datLong %>% 
+  filter(Date >= as.Date("2020-02-24")) %>% pull(Date) %>% max()
+
+predDF = broom::tidy(predict(myLinearModel,
+                             newdata = data.frame(myDay = startDay:(endDay+7)),
+                             interval = "prediction"))
+
+predDF$Date = seq(startDate, 
+                  max(datLong$Date)+days(7), 
+                  by = "day") 
+
+
+p4 = p1 + geom_ribbon(data = predDF,
+                 inherit.aes = FALSE, 
+                 aes(ymin=exp(lwr), ymax = exp(upr), x = Date), 
+                 fill = "grey2", alpha =0.25) +
+  geom_line(data = predDF,  inherit.aes = FALSE,
+            aes(x= Date, y= exp(fit), colour = "fit")) +
+  annotate("text",
+           y = c(max(exp(predDF$fit)), max(exp(predDF$lwr)),max(exp(predDF$upr))),
+           x = max(predDF$Date)+days(2),
+           label = c(glue({round(max(exp(predDF$fit)))}),
+                     glue({round(max(exp(predDF$lwr)))}),
+                     glue({round(max(exp(predDF$upr)))})
+                     )
+           )+
+  labs(title = glue("Number of COVID-19 infections in {datLong$country[1]} with a 7 day fit") )+
+  theme(legend.title = element_blank()) 
+```
+```{r picPred, echo=FALSE}
+p4 + facet_zoom(xlim= c(endDate, max(predDF$Date)))
 ```
 
 
