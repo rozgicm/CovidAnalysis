@@ -31,7 +31,7 @@ Data are pulled from JHU Git Hub archive
 Implemented Features
 --------------------
 
-As to this day `{r} today()` only simple models are considered.
+As to this day 2020-03-21only simple models are considered.
 
 ### Linear modelling
 

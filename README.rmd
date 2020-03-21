@@ -120,7 +120,7 @@ p1
 ```
 
 ## Implemented Features
-As to this day ```{r} today()``` only simple models are considered.
+As to this day `r lubridate::today()`only simple models are considered.
 
 
 ### Linear modelling
