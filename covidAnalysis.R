@@ -28,19 +28,19 @@ library(deSolve)
 library(EpiEstim)
 
 ################
-human_numbers <- function(x = NULL, smbl ="", signif = 1){
-  humanity <- function(y){
+human_numbers = function(x = NULL, smbl ="", signif = 1){
+  humanity = function(y){
     
     if (!is.na(y)){
-      tn <- round(abs(y) / 1e12, signif) #Bio
-      b <- round(abs(y) / 1e9, signif) #Mrd
-      m <- round(abs(y) / 1e6, signif) #Mio
-      k <- round(abs(y) / 1e3, signif)
+      tn = round(abs(y) / 1e12, signif) #Bio
+      b = round(abs(y) / 1e9, signif) #Mrd
+      m = round(abs(y) / 1e6, signif) #Mio
+      k = round(abs(y) / 1e3, signif)
       
       if ( y >= 0 ){
-        y_is_positive <- ""
+        y_is_positive = ""
       } else {
-        y_is_positive <- "-"
+        y_is_positive = "-"
       }
       
       if ( k < 1 ) {
@@ -64,7 +64,7 @@ human_numbers <- function(x = NULL, smbl ="", signif = 1){
 ################
 # location of JHU data on github (here only confirmed cases, 
 # see github page for the other files)
-jhu_url <- paste("https://raw.githubusercontent.com/CSSEGISandData/", 
+jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/", 
                  "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/", 
                  "time_series_19-covid-Confirmed.csv", sep = "")
 
@@ -278,31 +278,31 @@ init = c(S= numPeople - datLong$cumulative_cases[1],
 
 # first we need a function which translates the ODE's stated in the SIR model
 
-SIR <- function(time, state, parameters) {
-  par <- as.list(c(state, parameters))
+SIR = function(time, state, parameters) {
+  par = as.list(c(state, parameters))
   with(par, {
-    dS <- -beta * I * S/numPeople
-    dI <- beta * I * S/numPeople - gamma * I
-    dR <- gamma * I
+    dS = -beta * I * S/numPeople
+    dI = beta * I * S/numPeople - gamma * I
+    dR = gamma * I
     return(list(c(dS, dI, dR)))
   })
 }
 
-RSS <- function(parameters) {
-  names(parameters) <- c("beta", "gamma")
-  out <- ode(y = init, times = datLong$myDay, func = SIR, parms = parameters)
-  fit <- out[, 3]
+RSS = function(parameters) {
+  names(parameters) = c("beta", "gamma")
+  out = ode(y = init, times = datLong$myDay, func = SIR, parms = parameters)
+  fit = out[, 3]
   return(sum((datLong$cumulative_cases - fit)^2))
 }
 
 
-Opt <- optim(c(0.5, 0.5), 
+Opt = optim(c(0.5, 0.5), 
              RSS, 
              method = "L-BFGS-B", 
              lower = c(0,0), 
              upper = c(1, 1)
              )
-t <- 1:100
+t = 1:100
 
 optParams = set_names(Opt$par, "beta", "gamma")
 
@@ -360,8 +360,8 @@ pInc = gerIncidentDf %>% pivot_longer(-dates) %>%
   scale_fill_flat_d()
 
 
-pSI <- plot(epiEstimObj, "SI") +theme_lucid()
-pRi <- plot(epiEstimObj, "R") +theme_lucid()
+pSI = plot(epiEstimObj, "SI") +theme_lucid()
+pRi = plot(epiEstimObj, "R") +theme_lucid()
 
 pInc/pSI/pRi
 
