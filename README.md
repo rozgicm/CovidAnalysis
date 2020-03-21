@@ -1,5 +1,5 @@
 COVID-19 outbreak analysis in Germany with R
---------------------------------------------
+============================================
 
 The conducted analysis follows the posts by Tim Churches, starting with
 his post in February 2020:
@@ -7,7 +7,8 @@ his post in February 2020:
 
 The code is slightly changed, some graphs are tweaked. All in all this
 is supposed to help scientists as well as non-scientists to gain
-insights and conduct their own analysis of the situation.
+insights and conduct their own analysis of the situation. The main code
+is found in **covidAnalysis.R**.
 
 ### Data Acquisition
 
@@ -16,7 +17,10 @@ Data are pulled from JHU Git Hub archive
 
 ![](README_files/figure-markdown_strict/unnamed-chunk-1-1.png)
 
-### Implemented Features
+Implemented Features
+--------------------
+
+### Linear modelling
 
 A simple liner model is fit can easily be fitted to the log-transformed
 data:
@@ -54,3 +58,12 @@ data:
 With a linear modell crude predictions can be made:
 
 ![](README_files/figure-markdown_strict/picPred-1.png)
+
+### SIR modelling
+
+A more sophisticated way to model the outbreak can be performed by
+appling the SIR-Model (**S**usceptible **I**nfectious **R**ecovered).
+The model is based on an ODE system. See the code and Tim Churches’
+posts for more details. However, the following can be obtained:
+
+![](README_files/figure-markdown_strict/SIRPic-1.png)
