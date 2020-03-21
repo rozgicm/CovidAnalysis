@@ -17,13 +17,13 @@ library(lubridate)
 library(see)
 
 # allows for great annotaions using our data making the code transferable
-library(glue) 
+library(glue)
 
 # nice package to arrange multiple plots
 library(patchwork)
 
-# helps us to make interactive plots 
-library(plotly) 
+# helps us to make interactive plots
+library(plotly)
 
 # make even nicer plots
 library(ggforce)
@@ -35,19 +35,19 @@ library(deSolve)
 library(EpiEstim)
 human_numbers = function(x = NULL, smbl ="", signif = 1){
   humanity = function(y){
-    
+
     if (!is.na(y)){
       tn = round(abs(y) / 1e12, signif) #Bio
       b = round(abs(y) / 1e9, signif) #Mrd
       m = round(abs(y) / 1e6, signif) #Mio
       k = round(abs(y) / 1e3, signif)
-      
+
       if ( y >= 0 ){
         y_is_positive = ""
       } else {
         y_is_positive = "-"
       }
-      
+
       if ( k < 1 ) {
         paste0( y_is_positive, smbl, round(abs(y), signif ))
       } else if ( m < 1){
@@ -63,7 +63,7 @@ human_numbers = function(x = NULL, smbl ="", signif = 1){
       "-"
     }
   }
-  
+
   sapply(x,humanity)
 }
 ```
@@ -79,26 +79,26 @@ The code is slightly changed, some graphs are tweaked. All in all this is suppos
 Data are pulled from JHU Git Hub archive <https://raw.githubusercontent.com/CSSEGISandData/>
 
 ```{r read_data, message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/", 
-                 "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/", 
+jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/",
+                 "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/",
                  "time_series_19-covid-Confirmed.csv", sep = "")
 
-dat =  read_csv(jhu_url) %>% rename(province = "Province/State", 
+dat =  read_csv(jhu_url) %>% rename(province = "Province/State",
                                     country = "Country/Region")
 
-datLong = dat %>% 
+datLong = dat %>%
   filter(country == "Germany") %>%  
   pivot_longer(-c(province,country, Lat, Long),
-               names_to = "Date", 
+               names_to = "Date",
                values_to = "cumulative_cases")
-datLong = datLong %>% 
-  select(-c(province, Lat, Long)) %>% 
-  mutate(Date = mdy(Date)) 
+datLong = datLong %>%
+  select(-c(province, Lat, Long)) %>%
+  mutate(Date = mdy(Date))
 datLong = datLong %>%  
-  filter(cumulative_cases != 0) %>% 
+  filter(cumulative_cases != 0) %>%
   mutate(incident_cases = c(0, diff(cumulative_cases)),
          myDay = 1:nrow(.),
-         myWeek = week(Date)-3 ) 
+         myWeek = week(Date)-3 )
 
 p1 = datLong %>% ggplot(aes(x=Date, y = cumulative_cases)) +
   geom_line() +
@@ -119,14 +119,14 @@ A simple liner model is fit can easily be fitted to the log-transformed data:
 
 ```{r linModel, echo=TRUE}
 myLinearModel = lm(log(cumulative_cases) ~ myDay,
-                   datLong %>% 
-                   filter(Date >= as.Date("2020-02-24")) 
+                   datLong %>%
+                   filter(Date >= as.Date("2020-02-24"))
                    )
 summary(myLinearModel)
 ```
 ```{r linModelPlot, echo=FALSE}
 linModelDf = broom::tidy(myLinearModel)
-datLong %>% filter(Date >= as.Date("2020-02-24") ) %>% 
+datLong %>% filter(Date >= as.Date("2020-02-24") ) %>%
   ggplot(aes(x=myDay, y= log(cumulative_cases))) +
   geom_smooth(method = lm) +
   geom_point() +
@@ -137,29 +137,29 @@ datLong %>% filter(Date >= as.Date("2020-02-24") ) %>%
 
 With a linear modell crude predictions can be made:
 ```{r predictions, message=FALSE, warning=FALSE, include=FALSE}
-startDay =  datLong %>% 
+startDay =  datLong %>%
   filter(Date >= as.Date("2020-02-24")) %>% pull(myDay) %>% min()
-endDay = datLong %>% 
+endDay = datLong %>%
   filter(Date >= as.Date("2020-02-24")) %>% pull(myDay) %>% max()
 
-startDate = datLong %>% 
+startDate = datLong %>%
   filter(Date >= as.Date("2020-02-24")) %>% pull(Date) %>% min()
 
-endDate = datLong %>% 
+endDate = datLong %>%
   filter(Date >= as.Date("2020-02-24")) %>% pull(Date) %>% max()
 
 predDF = broom::tidy(predict(myLinearModel,
                              newdata = data.frame(myDay = startDay:(endDay+7)),
                              interval = "prediction"))
 
-predDF$Date = seq(startDate, 
-                  max(datLong$Date)+days(7), 
-                  by = "day") 
+predDF$Date = seq(startDate,
+                  max(datLong$Date)+days(7),
+                  by = "day")
 
 
 p4 = p1 + geom_ribbon(data = predDF,
-                 inherit.aes = FALSE, 
-                 aes(ymin=exp(lwr), ymax = exp(upr), x = Date), 
+                 inherit.aes = FALSE,
+                 aes(ymin=exp(lwr), ymax = exp(upr), x = Date),
                  fill = "grey2", alpha =0.25) +
   geom_line(data = predDF,  inherit.aes = FALSE,
             aes(x= Date, y= exp(fit), colour = "fit")) +
@@ -172,7 +172,7 @@ p4 = p1 + geom_ribbon(data = predDF,
                      )
            )+
   labs(title = glue("Number of COVID-19 infections in {datLong$country[1]} with a 7 day fit") )+
-  theme(legend.title = element_blank()) 
+  theme(legend.title = element_blank())
 ```
 ```{r picPred, echo=FALSE}
 p4 + facet_zoom(xlim= c(endDate, max(predDF$Date)))
@@ -211,20 +211,20 @@ RSS = function(parameters) {
 }
 
 
-Opt = optim(c(0.5, 0.5), 
-             RSS, 
-             method = "L-BFGS-B", 
-             lower = c(0,0), 
+Opt = optim(c(0.5, 0.5),
+             RSS,
+             method = "L-BFGS-B",
+             lower = c(0,0),
              upper = c(1, 1)
              )
 t = 1:100
 
 optParams = set_names(Opt$par, "beta", "gamma")
 
-fittedCumulativeIncidenceDf = data.frame(ode(y = init, 
-                                             times = t, 
-                                              func = SIR, 
-                                             parms = optParams)) %>% 
+fittedCumulativeIncidenceDf = data.frame(ode(y = init,
+                                             times = t,
+                                              func = SIR,
+                                             parms = optParams)) %>%
   mutate(Date = min(datLong$Date) + days(time-1))
 
 
@@ -234,9 +234,9 @@ dat = left_join(fittedCumulativeIncidenceDf, datLong ,by=c("Date"))
 ```
 ```{r SIRPic, echo=FALSE, warning=FALSE}
 
-dat %>% select(Date, cumulative_cases, I) %>% 
-  rename(cCases =cumulative_cases, fittedCCases = I) %>% 
-  pivot_longer(-Date) %>% 
+dat %>% select(Date, cumulative_cases, I) %>%
+  rename(cCases =cumulative_cases, fittedCCases = I) %>%
+  pivot_longer(-Date) %>%
   ggplot(aes(x=Date, y=value, colour = name)) +
   geom_line() +
   geom_point(shape = "x") +
@@ -246,15 +246,11 @@ dat %>% select(Date, cumulative_cases, I) %>%
                       computed R0 ={round(optParams[1]/optParams[2],2)},\n
                       fitted point of reduce: At {dat$Date[which(dat$I==max(dat$I))]} with {human_numbers(round(dat$I[which(dat$I==max(dat$I))]))} infections"),
        y = "Cummulative Cases") +
-  
+
   scale_y_continuous(labels = human_numbers)+
   theme_lucid()+
   scale_color_material_d() +
-  facet_zoom( y = name =="cCases", 
-              xlim = c(min(datLong$Date), max(datLong$Date)), 
+  facet_zoom( y = name =="cCases",
+              xlim = c(min(datLong$Date), max(datLong$Date)),
               horizontal = FALSE)
 ```
-
-
-
-

@@ -26,29 +26,29 @@ A simple liner model is fit can easily be fitted to the log-transformed
 data:
 
     myLinearModel = lm(log(cumulative_cases) ~ myDay,
-                       datLong %>% 
-                       filter(Date >= as.Date("2020-02-24")) 
+                       datLong %>%
+                       filter(Date >= as.Date("2020-02-24"))
                        )
     summary(myLinearModel)
 
-    ## 
+    ##
     ## Call:
-    ## lm(formula = log(cumulative_cases) ~ myDay, data = datLong %>% 
+    ## lm(formula = log(cumulative_cases) ~ myDay, data = datLong %>%
     ##     filter(Date >= as.Date("2020-02-24")))
-    ## 
+    ##
     ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -0.40969 -0.16772  0.01537  0.10461  0.40208 
-    ## 
+    ##      Min       1Q   Median       3Q      Max
+    ## -0.40969 -0.16772  0.01537  0.10461  0.40208
+    ##
     ## Coefficients:
     ##              Estimate Std. Error t value Pr(>|t|)    
     ## (Intercept) -5.344006   0.223405  -23.92   <2e-16 ***
     ## myDay        0.286230   0.005297   54.03   <2e-16 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
+    ##
     ## Residual standard error: 0.2026 on 24 degrees of freedom
-    ## Multiple R-squared:  0.9918, Adjusted R-squared:  0.9915 
+    ## Multiple R-squared:  0.9918, Adjusted R-squared:  0.9915
     ## F-statistic:  2919 on 1 and 24 DF,  p-value: < 2.2e-16
 
     ## `geom_smooth()` using formula 'y ~ x'
@@ -65,5 +65,6 @@ A more sophisticated way to model the outbreak can be performed by
 appling the SIR-Model (**S**usceptible **I**nfectious **R**ecovered).
 The model is based on an ODE system. See the code and Tim Churches’
 posts for more details. However, the following can be obtained:
+
 
 ![](README_files/figure-markdown_strict/SIRPic-1.png)
