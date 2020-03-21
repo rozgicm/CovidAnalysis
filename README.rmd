@@ -33,14 +33,47 @@ library(deSolve)
 
 # epidemiology package
 library(EpiEstim)
+human_numbers = function(x = NULL, smbl ="", signif = 1){
+  humanity = function(y){
+    
+    if (!is.na(y)){
+      tn = round(abs(y) / 1e12, signif) #Bio
+      b = round(abs(y) / 1e9, signif) #Mrd
+      m = round(abs(y) / 1e6, signif) #Mio
+      k = round(abs(y) / 1e3, signif)
+      
+      if ( y >= 0 ){
+        y_is_positive = ""
+      } else {
+        y_is_positive = "-"
+      }
+      
+      if ( k < 1 ) {
+        paste0( y_is_positive, smbl, round(abs(y), signif ))
+      } else if ( m < 1){
+        paste0 (y_is_positive, smbl,  k , "K")
+      } else if (b < 1){
+        paste0 (y_is_positive, smbl, m ,"Mio")
+      }else if(tn < 1){
+        paste0 (y_is_positive, smbl, b ,"Mrd")
+      } else {
+        paste0 (y_is_positive, smbl,  comma(tn), "Bio")
+      }
+    } else if (is.na(y) | is.null(y)){
+      "-"
+    }
+  }
+  
+  sapply(x,humanity)
+}
 ```
 
-## COVID-19 outbreak analysis in Germany with R
+# COVID-19 outbreak analysis in Germany with R
 
 The conducted analysis follows the posts by Tim Churches, starting with his post in February 2020:
 <https://timchurches.github.io/blog/posts/2020-02-18-analysing-covid-19-2019-ncov-outbreak-data-with-r-part-1/#estimating-changes-in-the-effective-reproduction-number>
 
-The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation.
+The code is slightly changed, some graphs are tweaked. All in all this is supposed to help scientists as well as non-scientists to gain insights and conduct their own analysis of the situation. The main code is found in **covidAnalysis.R**.
 
 ### Data Acquisition
 Data are pulled from JHU Git Hub archive <https://raw.githubusercontent.com/CSSEGISandData/>
@@ -80,7 +113,8 @@ p1 = datLong %>% ggplot(aes(x=Date, y = cumulative_cases)) +
 p1
 ```
 
-### Implemented Features
+## Implemented Features
+### Linear modelling
 A simple liner model is fit can easily be fitted to the log-transformed data:
 
 ```{r linModel, echo=TRUE}
@@ -143,6 +177,84 @@ p4 = p1 + geom_ribbon(data = predDF,
 ```{r picPred, echo=FALSE}
 p4 + facet_zoom(xlim= c(endDate, max(predDF$Date)))
 ```
+
+### SIR modelling
+A more sophisticated way to model the outbreak can be performed by appling the SIR-Model
+(**S**usceptible **I**nfectious **R**ecovered). The model is based on an ODE system. See the code and Tim Churches' posts for more details. However, the following can be obtained:
+```{r include=FALSE, paged.print=TRUE}
+
+numPeople = 1000*83149.3
+sirStartDate = min(datLong$Date)
+
+
+init = c(S= numPeople - datLong$cumulative_cases[1],
+         I = datLong$cumulative_cases[1],
+         R = 0)
+
+# first we need a function which translates the ODE's stated in the SIR model
+
+SIR = function(time, state, parameters) {
+  par = as.list(c(state, parameters))
+  with(par, {
+    dS = -beta * I * S/numPeople
+    dI = beta * I * S/numPeople - gamma * I
+    dR = gamma * I
+    return(list(c(dS, dI, dR)))
+  })
+}
+
+RSS = function(parameters) {
+  names(parameters) = c("beta", "gamma")
+  out = ode(y = init, times = datLong$myDay, func = SIR, parms = parameters)
+  fit = out[, 3]
+  return(sum((datLong$cumulative_cases - fit)^2))
+}
+
+
+Opt = optim(c(0.5, 0.5), 
+             RSS, 
+             method = "L-BFGS-B", 
+             lower = c(0,0), 
+             upper = c(1, 1)
+             )
+t = 1:100
+
+optParams = set_names(Opt$par, "beta", "gamma")
+
+fittedCumulativeIncidenceDf = data.frame(ode(y = init, 
+                                             times = t, 
+                                              func = SIR, 
+                                             parms = optParams)) %>% 
+  mutate(Date = min(datLong$Date) + days(time-1))
+
+
+dat = left_join(fittedCumulativeIncidenceDf, datLong ,by=c("Date"))
+
+
+```
+```{r SIRPic, echo=FALSE}
+
+dat %>% select(Date, cumulative_cases, I) %>% 
+  rename(cCases =cumulative_cases, fittedCCases = I) %>% 
+  pivot_longer(-Date) %>% 
+  ggplot(aes(x=Date, y=value, colour = name)) +
+  geom_line() +
+  geom_point(shape = "x") +
+  labs(title = glue("SIR-Modell based projection of COVID-19 infections in {datLong$country[1]}"),
+       subtitle = glue("data ranging from {min(dat$Date)} to {max(dat$Date)}"),
+       caption = glue("fitted data from SIR model,\n
+                      computed R0 ={round(optParams[1]/optParams[2],2)},\n
+                      fitted point of reduce: At {dat$Date[which(dat$I==max(dat$I))]} with {human_numbers(round(dat$I[which(dat$I==max(dat$I))]))} infections"),
+       y = "Cummulative Cases") +
+  
+  scale_y_continuous(labels = human_numbers)+
+  theme_lucid()+
+  scale_color_material_d() +
+  facet_zoom( y = name =="cCases", 
+              xlim = c(min(datLong$Date), max(datLong$Date)), 
+              horizontal = FALSE)
+```
+
 
 
 

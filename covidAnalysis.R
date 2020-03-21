@@ -213,6 +213,7 @@ p4 = p1 + geom_ribbon(data = predDF,
                  fill = "grey2", alpha =0.25) +
   geom_line(data = predDF,  inherit.aes = FALSE,
             aes(x= Date, y= exp(fit), colour = "fit")) +
+  scale_y_continuous(labels = human_numbers)+
   annotate("text",
            y = c(max(exp(predDF$fit)), max(exp(predDF$lwr)),max(exp(predDF$upr))),
            x = max(predDF$Date)+days(2),
