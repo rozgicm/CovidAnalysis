@@ -28,39 +28,7 @@ library(deSolve)
 library(EpiEstim)
 
 ################
-human_numbers = function(x = NULL, smbl ="", signif = 1){
-  humanity = function(y){
-    
-    if (!is.na(y)){
-      tn = round(abs(y) / 1e12, signif) #Bio
-      b = round(abs(y) / 1e9, signif) #Mrd
-      m = round(abs(y) / 1e6, signif) #Mio
-      k = round(abs(y) / 1e3, signif)
-      
-      if ( y >= 0 ){
-        y_is_positive = ""
-      } else {
-        y_is_positive = "-"
-      }
-      
-      if ( k < 1 ) {
-        paste0( y_is_positive, smbl, round(abs(y), signif ))
-      } else if ( m < 1){
-        paste0 (y_is_positive, smbl,  k , "K")
-      } else if (b < 1){
-        paste0 (y_is_positive, smbl, m ,"Mio")
-      }else if(tn < 1){
-        paste0 (y_is_positive, smbl, b ,"Mrd")
-      } else {
-        paste0 (y_is_positive, smbl,  comma(tn), "Bio")
-      }
-    } else if (is.na(y) | is.null(y)){
-      "-"
-    }
-  }
-  
-  sapply(x,humanity)
-}
+source(paste0(getwd(),"/humanNumbers.R"))
 ################
 # location of JHU data on github (here only confirmed cases, 
 # see github page for the other files)
@@ -85,6 +53,52 @@ head(dat)
 # a single country this is rather inconvenient, we need the data in 'long' format,
 # i.e., every row holds one datapoint information.
 
+#############################
+# Let's try to get some inofromation about europe
+############################
+
+datWorld =  dat %>% pivot_longer(-c(province,country, Lat, Long),
+                          names_to = "Date", 
+                          values_to = "cumulative_cases")
+europe = read_csv2(file =paste0(getwd(), "/countriesOfEurope.csv"))
+
+# consider "Mainland" only for the time beeing
+datEurope = filter(datWorld, country %in% europe$Countries,
+                   (province %in% europe$Countries | is.na(province)))
+
+tPop = readRDS(file = paste0(getwd(), "/tPop.RDS"))
+cCodes = readRDS(file = paste0(getwd(), "/countryCodes.RDS"))
+
+datEurope = datEurope %>% 
+  select (-province) %>% 
+  left_join(., cCodes %>%  select(name, charcode), 
+            by = c("country"="name")) %>% 
+  left_join(., tPop %>% 
+              filter(Year =="2020") %>%
+              select(-Year),
+            by ="charcode") %>% 
+  mutate(Date = mdy(Date), value = value * 1000)
+
+
+datEurope = datEurope %>% filter(cumulative_cases > 100) %>% 
+  group_by(country) %>%
+  group_modify(~{
+    .x$daySince100 = 1:nrow(.x)
+    return(.x)
+  })%>% ungroup()
+
+
+(datEurope %>% 
+  ggplot(aes(x= daySince100, y = (cumulative_cases/value)*100, colour = country, group = country) )+
+           geom_line() +
+           labs(x = "Number of days after reaching 100 cases",
+                y =  "Percentage of population per country",
+                title = "Development of cases in european countries after reaching 100 infections \nOnly mainland provinces are cnsidered (e.g. only France not St.Martin)"
+                ) +
+           theme_lucid() +
+  scale_colour_flat_d() )%>% ggplotly()
+
+#######################
 datLong = dat %>% 
   filter(country == "Germany") %>%  
   pivot_longer(-c(province,country, Lat, Long),
@@ -213,7 +227,7 @@ p4 = p1 + geom_ribbon(data = predDF,
                  fill = "grey2", alpha =0.25) +
   geom_line(data = predDF,  inherit.aes = FALSE,
             aes(x= Date, y= exp(fit), colour = "fit")) +
-  scale_y_continuous(labels = human_numbers)+
+  scale_y_continuous(labels = humanNumbers)+
   annotate("text",
            y = c(max(exp(predDF$fit)), max(exp(predDF$lwr)),max(exp(predDF$upr))),
            x = max(predDF$Date)+days(2),
@@ -327,10 +341,10 @@ dat %>% select(Date, cumulative_cases, I) %>%
        subtitle = glue("data ranging from {min(dat$Date)} to {max(dat$Date)}"),
        caption = glue("fitted data from SIR model,\n
                       computed R0 ={round(optParams[1]/optParams[2],2)},\n
-                      fitted point of reduce: At {dat$Date[which(dat$I==max(dat$I))]} with {human_numbers(round(dat$I[which(dat$I==max(dat$I))]))} infections"),
+                      fitted point of reduce: At {dat$Date[which(dat$I==max(dat$I))]} with {humanNumbers(round(dat$I[which(dat$I==max(dat$I))]))} infections"),
        y = "Cummulative Cases") +
   
-  scale_y_continuous(labels = human_numbers)+
+  scale_y_continuous(labels = humanNumbers)+
   theme_lucid()+
   scale_color_material_d() +
   facet_zoom( y = name =="cCases", 
@@ -348,17 +362,9 @@ gerIncidentDf$imported[1] = gerIncidentDf$local[1]
 gerIncidentDf$local[1] = 0
 
 epiEstimObj = estimate_R(gerIncidentDf, 
-           method = "uncertain_si", 
-           config = make_config(list(mean_si = 7.5, 
-                                     std_mean_si = 2, 
-                                     min_mean_si = 1,
-                                     max_mean_si = 8.4,
-                                     std_si = 3.4, 
-                                     std_std_si = 1, 
-                                     min_std_si = 0.5,
-                                     max_std_si = 4,
-                                     n1 = 1000, 
-                                     n2 = 1000))
+                         method = "parametric_si", 
+                         config = make_config(list(mean_si = 4.4,
+                                                   std_si = 3.0))
            )
 # okay the plots are not what we want them to be, so we need to fight a bit
 
@@ -371,10 +377,9 @@ pInc = gerIncidentDf %>% pivot_longer(-dates) %>%
 
 
 pSI = plot(epiEstimObj, "SI") +theme_lucid()
-pRi = plot(epiEstimObj, "R") + theme_lucid() +
-  facet_zoom(xlim =c(as.Date("2020-03-07"), as.Date("2020-03-10")))
+pRi = plot(epiEstimObj, "R") + theme_lucid() 
+(pInc|pSI)/pRi
 
-pInc/pSI/pRi
-
+pRi
 
 
