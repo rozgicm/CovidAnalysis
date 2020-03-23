@@ -63,24 +63,29 @@ datWorld =  dat %>% pivot_longer(-c(province,country, Lat, Long),
 europe = read_csv2(file =paste0(getwd(), "/countriesOfEurope.csv"))
 
 # consider "Mainland" only for the time beeing
-datEurope = filter(datWorld, country %in% europe$Countries,
-                   (province %in% europe$Countries | is.na(province)))
+datEurope = filter(datWorld, country %in% europe$Countries)
+
+datEurope = datEurope %>% 
+  mutate(Date = mdy(Date)) %>% 
+  group_by(country, Date) %>% 
+    summarise(sumCumCases = sum(cumulative_cases)) %>% 
+  ungroup() 
+
 
 tPop = readRDS(file = paste0(getwd(), "/tPop.RDS"))
 cCodes = readRDS(file = paste0(getwd(), "/countryCodes.RDS"))
 
 datEurope = datEurope %>% 
-  select (-province) %>% 
   left_join(., cCodes %>%  select(name, charcode), 
             by = c("country"="name")) %>% 
   left_join(., tPop %>% 
               filter(Year =="2020") %>%
               select(-Year),
             by ="charcode") %>% 
-  mutate(Date = mdy(Date), value = value * 1000)
+  mutate(value = value * 1000)
 
 
-datEurope = datEurope %>% filter(cumulative_cases > 100) %>% 
+datEurope = datEurope %>% filter(sumCumCases > 100) %>% 
   group_by(country) %>%
   group_modify(~{
     .x$daySince100 = 1:nrow(.x)
@@ -89,12 +94,11 @@ datEurope = datEurope %>% filter(cumulative_cases > 100) %>%
 
 
 (datEurope %>% 
-  ggplot(aes(x= daySince100, y = (cumulative_cases/value)*100, colour = country, group = country) )+
+  ggplot(aes(x= daySince100, y = (sumCumCases/value)*100, colour = country, group = country) )+
            geom_line() +
            labs(x = "Number of days after reaching 100 cases",
                 y =  "Percentage of population per country",
-                title = "Development of cases in european countries after reaching 100 infections \nOnly mainland provinces are cnsidered (e.g. only France not St.Martin)"
-                ) +
+                title = "Development of cases in european countries after reaching 100 infections") +
            theme_lucid() +
   scale_colour_flat_d() )%>% ggplotly()
 
