@@ -34,7 +34,7 @@ source(paste0(getwd(),"/humanNumbers.R"))
 # see github page for the other files)
 jhu_url = paste("https://raw.githubusercontent.com/CSSEGISandData/", 
                  "COVID-19/master/csse_covid_19_data/", "csse_covid_19_time_series/", 
-                 "time_series_19-covid-Confirmed.csv", sep = "")
+                 "time_series_covid19_confirmed_global.csv", sep = "")
 
 
 # load data from csv and rename the province and country columns 
@@ -250,11 +250,7 @@ p4 + facet_zoom(xlim= c(endDate, max(predDF$Date)))
 
 # we can now compute the mean time it take untill the number of cases doubles
 
-log(2)/(linModelDf %>%
-          pivot_longer(-term) %>% 
-          filter(term == "myDay", name =="estimate") %>% 
-          pull(value)
-        )
+log(2)/linModelDf$estimate[2]
 
 #########
 # Allright, next we try to follow the analysis present here:
