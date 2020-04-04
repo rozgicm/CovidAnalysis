@@ -115,7 +115,7 @@ head(datLong)
 # (mdy from package(lubridate) will do the trick)  
 datLong = datLong %>% 
   select(-c(province, Lat, Long)) %>% 
-  mutate(Date = mdy(Date)) 
+  mutate(Date = mdy(Date, tz= "UTC")) 
 
 # next we need to do some transformations:
 # 1. We will omit 0's, since we will log transform our data, 0's will be..disturbing
@@ -141,6 +141,8 @@ p1 = datLong %>% ggplot(aes(x=Date, y = cumulative_cases)) +
   theme_lucid()+
   scale_fill_material_c()
 
+p1
+
 p2 = datLong %>% ggplot(aes(x=Date, y = log(cumulative_cases))) +
   geom_line() +
   geom_point(shape = "x") +
@@ -160,9 +162,9 @@ p1 /p2
 
 # Do you want the plots interactive? - let's do this!
 
-p1 %>% ggplotly()
+p1 %>% ggplotly(., dynamicTicks = TRUE)
 
-p2 %>% ggplotly()
+p2 %>% ggplotly(., dynamicTicks = TRUE)
 
 
 # plots help us explore the data, for example we find,
